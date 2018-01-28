@@ -112,6 +112,12 @@ object PennTag {
 
 case class Entity(raw: String, lemma: String, namedEntity: Option[NamedEntity])
 
-sealed trait ParseTree
-case class Leaf(tag: PennTag, entity: Entity) extends ParseTree
-case class Branch(tag: PennTag, children: List[ParseTree]) extends ParseTree
+sealed trait ParseTree {
+  val size: Int
+}
+case class Leaf(tag: PennTag, entity: Entity) extends ParseTree {
+  val size = 1
+}
+case class Branch(tag: PennTag, children: List[ParseTree]) extends ParseTree {
+  lazy val size = children.map(_.size).sum
+}

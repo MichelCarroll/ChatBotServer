@@ -14,8 +14,8 @@ class Annotator {
       Leaf(
         PennTag.fromString(tree.value()),
         Entity(
-          extraAnnotations.lemmas(offset),
           tree.children().head.value(),
+          extraAnnotations.lemmas(offset),
           extraAnnotations.namedEntity(offset).map(label =>
             NamedEntityType.fromLabel(label, extraAnnotations.normalizedNamedEntity(offset))
           )
@@ -24,9 +24,11 @@ class Annotator {
     else
       Branch(
         PennTag.fromString(tree.value()),
-        tree.children().toList.zipWithIndex.map { case (child, i) =>
-          scalaTree(extraAnnotations)(offset + i, child)
-        }
+        //TODO: Highly inefficient
+        tree.children().toList.foldLeft((0, List[ParseTree]())) { case ((i, trees), child) =>
+          val tree = scalaTree(extraAnnotations)(offset + i, child)
+          (i + tree.size, tree :: trees)
+        }._2.reverse
       )
 
   def build(text: String): List[ParseTree] =

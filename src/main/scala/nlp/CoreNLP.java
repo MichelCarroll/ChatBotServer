@@ -62,6 +62,8 @@ public class CoreNLP {
                 normalizedNamedEntities.add(norm);
             }
 
+            System.out.println(lemmas.toString());
+
             results.add(new CoreNLPResult(tree, lemmas, namedEntityTypes, normalizedNamedEntities));
         }
 
