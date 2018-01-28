@@ -2,7 +2,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import facebook.AppContext
-import nlp.{NER, ParseTreeBuilder}
+import nlp.{NER, Annotator}
 
 import scala.io.StdIn
 import sext._
@@ -14,7 +14,7 @@ class ScreamingReplyBuilder(ner: NER) extends ReplyBuilder {
   }
 }
 
-class SentenceBreakdownReplyBuilder(parseTreeBuilder: ParseTreeBuilder) extends ReplyBuilder {
+class SentenceBreakdownReplyBuilder(parseTreeBuilder: Annotator) extends ReplyBuilder {
   def reply(received: String): String = {
     val trees = parseTreeBuilder.build(received)
     println(trees.treeString)
@@ -34,7 +34,7 @@ object Root extends App {
     "EAAWoxZCnbZCwkBAFyP2WeYDz9mMZBZB1JHPZBn0kIu7SCvGoyTRQoSTNzLdLeVsqhTpjGb2XBf5vg0wZBui6Pq8TyPZAVNIedSnvLE9rM6efLHnxJ110cX5hwif1HRVEwbnoTRz0tVPfX63T3bNecnJSVifgrXQAl48oRNH9OxZAZBAZDZD"
   )
 
-  val bindingFuture = Http().bindAndHandle(new ChatRoute(new SentenceBreakdownReplyBuilder(new ParseTreeBuilder())).route, "localhost", 8888)
+  val bindingFuture = Http().bindAndHandle(new ChatRoute(new SentenceBreakdownReplyBuilder(new Annotator())).route, "localhost", 8888)
 
   println(s"Server online at http://localhost:8888/\nPress RETURN to stop...")
   StdIn.readLine()

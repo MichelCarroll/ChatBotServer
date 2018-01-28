@@ -10,7 +10,9 @@ import java.util.Properties;
 
 import edu.stanford.nlp.dcoref.CorefChain;
 import edu.stanford.nlp.dcoref.CorefCoreAnnotations.CorefChainAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreAnnotations.NamedEntityTagAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.NormalizedNamedEntityTagAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.PartOfSpeechAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.TextAnnotation;
@@ -57,6 +59,8 @@ public class NER {
                 String pos = token.get(PartOfSpeechAnnotation.class);
                 // this is the nlp.NER label of the token
                 String ne = token.get(NamedEntityTagAnnotation.class);
+                String norm = token.get(NormalizedNamedEntityTagAnnotation.class);
+
 
                 System.out.println("word: " + word + " pos: " + pos + " ne:" + ne);
             }

@@ -1,29 +1,15 @@
 
-import nlp.ParseTreeBuilder
+import nlp.Annotator
 import org.scalatest._
 import sext._
+import wordnet.WordNet
 
 class Test extends FlatSpec with Matchers {
 
-//  "A Stack" should "pop values in last-in-first-out order" in {
-//    val stack = new Stack[Int]
-//    stack.push(1)
-//    stack.push(2)
-//    stack.pop() should be (2)
-//    stack.pop() should be (1)
-//  }
-//
-//  it should "throw NoSuchElementException if an empty stack is popped" in {
-//    val emptyStack = new Stack[Int]
-//    a [NoSuchElementException] should be thrownBy {
-//      emptyStack.pop()
-//    }
-//  }
-
-  val parseTreeBuilder = new ParseTreeBuilder()
+  val parseTreeBuilder = new Annotator()
 
   "something" should "something" in {
-    val tree = parseTreeBuilder.build("Joe is eating an apple.")
+    val tree = parseTreeBuilder.build("I will be arriving at 12pm with $12.05 in my wallet.")
     println(tree.treeString)
   }
 }

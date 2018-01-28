@@ -110,6 +110,8 @@ object PennTag {
   }
 }
 
+case class Entity(raw: String, lemma: String, namedEntity: Option[NamedEntity])
+
 sealed trait ParseTree
-case class Leaf(tag: PennTag, lemma: String, value: String) extends ParseTree
+case class Leaf(tag: PennTag, entity: Entity) extends ParseTree
 case class Branch(tag: PennTag, children: List[ParseTree]) extends ParseTree

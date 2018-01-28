@@ -8,11 +8,14 @@ import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.semgraph.SemanticGraph;
 import edu.stanford.nlp.semgraph.SemanticGraphCoreAnnotations;
+import edu.stanford.nlp.time.SUTime;
 import edu.stanford.nlp.trees.Tree;
 import edu.stanford.nlp.trees.TreeCoreAnnotations;
 import edu.stanford.nlp.util.CoreMap;
+import edu.stanford.nlp.time.TimeExpression;
 
 import java.io.IOException;
+import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +27,7 @@ public class CoreNLP {
 
     public CoreNLP() {
         Properties props = new Properties();
-        props.put("annotators", "tokenize, ssplit, pos, lemma, parse");
+        props.put("annotators", "tokenize, ssplit, pos, lemma, parse, ner");
         this.pipeline = new StanfordCoreNLP(props);
     }
 
@@ -46,12 +49,20 @@ public class CoreNLP {
             Tree tree = sentence.get(TreeCoreAnnotations.TreeAnnotation.class);
 
             List<String> lemmas = new ArrayList<>();
+            List<String> namedEntityTypes = new ArrayList<>();
+            List<String> normalizedNamedEntities = new ArrayList<>();
             for (CoreLabel token: sentence.get(CoreAnnotations.TokensAnnotation.class)) {
                 String lemma = token.get(CoreAnnotations.LemmaAnnotation.class);
                 lemmas.add(lemma);
+
+                String ne = token.get(CoreAnnotations.NamedEntityTagAnnotation.class);
+                namedEntityTypes.add(ne);
+
+                String norm = token.get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class);
+                normalizedNamedEntities.add(norm);
             }
 
-            results.add(new CoreNLPResult(tree, lemmas));
+            results.add(new CoreNLPResult(tree, lemmas, namedEntityTypes, normalizedNamedEntities));
         }
 
         return results;
