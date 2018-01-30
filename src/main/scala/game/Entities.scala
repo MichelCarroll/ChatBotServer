@@ -1,22 +1,13 @@
 package game
 
-import net.didion.jwnl.data.POS
-
-case class WordSense(lemma: String, pos: POS, senseId: Int)
-
-sealed trait Commodity {
-  val wordSense: WordSense
-}
-case object Lemon extends Commodity {
-  val wordSense = WordSense("lemon", POS.NOUN, 1)
-}
-case object Cup extends Commodity {
-  val wordSense = WordSense("cup", POS.NOUN, 1)
-}
+sealed trait Commodity
+case object Lemon extends Commodity
+case object Watermelon extends Commodity
 
 sealed trait QuantityUnit
 case object Single extends QuantityUnit
 case object Dozen extends QuantityUnit
+case object Crate extends QuantityUnit
 
 case class Quantity(amount: Int, quantityUnit: QuantityUnit)
 object Quantity {

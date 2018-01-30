@@ -12,7 +12,7 @@ case class Percent(decimal: Double) extends NamedEntity
 case class Date(normalized: String) extends NamedEntity
 case class Time(normalized: String) extends NamedEntity
 case class Duration(normalized: String) extends NamedEntity
-case object Set extends NamedEntity
+case object EntitySet extends NamedEntity
 case object UnknownNamedEntityType extends NamedEntity
 
 object NamedEntityType {
@@ -28,6 +28,6 @@ object NamedEntityType {
     case ("DATE", Some(normalizedString)) => Date(normalizedString)
     case ("TIME", Some(normalizedString)) => Time(normalizedString)
     case ("DURATION", Some(normalizedString)) => Duration(normalizedString)
-    case ("SET", _) => Set
+    case ("SET", _) => EntitySet
   }
 }

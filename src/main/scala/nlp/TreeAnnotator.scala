@@ -3,9 +3,7 @@ package nlp
 import edu.stanford.nlp.trees.{Tree => JavaTree}
 import scala.collection.JavaConverters._
 
-class Annotator {
-
-  val javaObject = new CoreNLP()
+class TreeAnnotator(javaObject: CoreNLP) {
 
   case class ExtraAnnotations(lemmas: List[String], namedEntity: List[Option[String]], normalizedNamedEntity: List[Option[String]])
 

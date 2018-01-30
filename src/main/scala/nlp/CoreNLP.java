@@ -48,10 +48,14 @@ public class CoreNLP {
 
             Tree tree = sentence.get(TreeCoreAnnotations.TreeAnnotation.class);
 
+            List<String> raws = new ArrayList<>();
             List<String> lemmas = new ArrayList<>();
             List<String> namedEntityTypes = new ArrayList<>();
             List<String> normalizedNamedEntities = new ArrayList<>();
+
             for (CoreLabel token: sentence.get(CoreAnnotations.TokensAnnotation.class)) {
+                raws.add(token.originalText());
+
                 String lemma = token.get(CoreAnnotations.LemmaAnnotation.class);
                 lemmas.add(lemma);
 
@@ -62,9 +66,7 @@ public class CoreNLP {
                 normalizedNamedEntities.add(norm);
             }
 
-            System.out.println(lemmas.toString());
-
-            results.add(new CoreNLPResult(tree, lemmas, namedEntityTypes, normalizedNamedEntities));
+            results.add(new CoreNLPResult(tree, raws, lemmas, namedEntityTypes, normalizedNamedEntities));
         }
 
         return results;
