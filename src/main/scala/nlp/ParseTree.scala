@@ -116,14 +116,17 @@ sealed trait ParseTree {
   val size: Int
   def flatten: List[Entity]
   def tags: List[PennTag]
+  def leaves: List[Leaf]
 }
 case class Leaf(tag: PennTag, entity: Entity) extends ParseTree {
   val size = 1
   def flatten: List[Entity] = List(entity)
   def tags: List[PennTag] = List(tag)
+  def leaves: List[Leaf] = List(this)
 }
 case class Branch(tag: PennTag, children: List[ParseTree]) extends ParseTree {
   lazy val size = children.map(_.size).sum
   def flatten: List[Entity] = children.flatMap(_.flatten)
   def tags: List[PennTag] = tag :: children.flatMap(_.tags)
+  def leaves: List[Leaf] = children.flatMap(_.leaves)
 }
