@@ -1,8 +1,16 @@
 package game
 
-sealed trait Commodity
-case object Lemon extends Commodity
-case object Watermelon extends Commodity
+case class Quantity(amount: Int) {
+  def +(other: Quantity) = Quantity(amount + other.amount)
+  def -(other: Quantity) = Quantity(amount - other.amount)
+  def >=(other: Quantity): Boolean = amount >= other.amount
+  def <=(other: Quantity): Boolean = amount <= other.amount
+}
 
-case class Quantity(amount: Int)
-case class Gold(amount: Int)
+case class Gold(amount: Int) {
+  def +(other: Gold) = Gold(amount + other.amount)
+  def -(other: Gold) = Gold(amount + other.amount)
+  def >=(other: Gold): Boolean = amount >= other.amount
+  def <=(other: Gold): Boolean = amount <= other.amount
+  def *(quantity: Quantity) = Gold(amount * quantity.amount)
+}

@@ -6,8 +6,8 @@ import org.scalatest._
 class UserIntentTests extends FlatSpec with Matchers {
 
   def test(text: String, expectedUserIntents: Option[UserIntent]): Assertion = {
-    val userIntents = UserIntentTester.testUserIntent(text)
-    userIntents should equal(expectedUserIntents)
+    val userIntent = UserIntentExtractor.userIntent(text)
+    userIntent should equal(expectedUserIntents)
   }
 
   implicit class TextPimp(text: String) {

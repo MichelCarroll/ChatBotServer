@@ -2,31 +2,16 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import facebook.AppContext
-import game.UserIntentTester
+import game.UserIntentExtractor
 import nlp.{FlatAnnotator, CoreNLP, NER, TreeAnnotator}
 
 import scala.io.StdIn
 import sext._
 import wordnet.WordNet
 
-class ScreamingReplyBuilder(ner: NER) extends ReplyBuilder {
-  def reply(received: String): String = {
-    ner.run(received)
-    received.toUpperCase + "!!"
-  }
-}
-
-class SentenceBreakdownReplyBuilder(parseTreeBuilder: TreeAnnotator) extends ReplyBuilder {
-  def reply(received: String): String = {
-    val trees = parseTreeBuilder.build(received)
-    println(trees.treeString)
-    "DONE!"
-  }
-}
-
 class GameReplyBuilder extends ReplyBuilder {
   def reply(received: String): String = {
-    UserIntentTester.testUserIntent(received) match {
+    UserIntentExtractor.userIntent(received) match {
       case Some(userIntent) => s"You want to $userIntent"
       case None => "Uh?"
     }
