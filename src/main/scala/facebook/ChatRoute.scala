@@ -6,17 +6,17 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.stream.Materializer
 import chat.ReplyBuilder
+import common.FuturePimps
 import facebook.protocol.{FacebookJsonSupport, MessageResponse, MessagesReceived, TextMessage}
 import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 class ChatRoute(replyBuilder: ReplyBuilder)
                (implicit val system: ActorSystem,
                 val materializer: Materializer,
                 val appContext: AppContext)
-  extends FacebookJsonSupport {
+  extends FacebookJsonSupport with FuturePimps {
 
   implicit val executionContext = system.dispatcher
 
@@ -37,17 +37,19 @@ class ChatRoute(replyBuilder: ReplyBuilder)
         entity(as[MessagesReceived]) { messagesReceived =>
 
           val responses = messagesReceived.entries
-            .map(entry => MessageResponse(entry.sender, TextMessage(
+            .flatMap(entry =>
               replyBuilder.reply(entry.sender.value, entry.message.value)
-            )))
-            .map(response =>
+              .map(text => MessageResponse(entry.sender, TextMessage(text)))
+            )
+
+          val allReplies = serialiseFutures(responses)(response =>
               Http().singleRequest(HttpRequest(
                 method = HttpMethods.POST,
                 uri = s"https://graph.facebook.com/v2.6/me/messages?access_token=${appContext.pageAccessToken}"
               ).withEntity(ContentTypes.`application/json`, response.toJson.toString()))
-            )
+          )
 
-          complete(Future.sequence(responses).map(_ => StatusCodes.OK -> HttpEntity(ContentTypes.`text/html(UTF-8)`, "OK")))
+          complete(allReplies.map(_ => StatusCodes.OK -> HttpEntity(ContentTypes.`text/html(UTF-8)`, "OK")))
         }
       }
 
