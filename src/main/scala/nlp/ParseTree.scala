@@ -115,12 +115,15 @@ case class Entity(raw: String, lemma: String, namedEntity: Option[NamedEntity])
 sealed trait ParseTree {
   val size: Int
   def flatten: List[Entity]
+  def tags: List[PennTag]
 }
 case class Leaf(tag: PennTag, entity: Entity) extends ParseTree {
   val size = 1
   def flatten: List[Entity] = List(entity)
+  def tags: List[PennTag] = List(tag)
 }
 case class Branch(tag: PennTag, children: List[ParseTree]) extends ParseTree {
   lazy val size = children.map(_.size).sum
   def flatten: List[Entity] = children.flatMap(_.flatten)
+  def tags: List[PennTag] = tag :: children.flatMap(_.tags)
 }

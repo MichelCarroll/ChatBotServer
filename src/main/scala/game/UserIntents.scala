@@ -1,13 +1,51 @@
 package game
 
+import sext._
 import nlp._
+import wordnet.WordNet
 
 sealed trait UserIntent
-case class BuyCommodity(quantity: Quantity, commodity: Commodity) extends UserIntent
+
+case object AskWallet extends UserIntent
+case object AskWholeInventory extends UserIntent
+case class AskCommodityInventory(commodity: Commodity) extends UserIntent
 case class AskIfAbleToBuyCommodity(quantity: Quantity, commodity: Commodity) extends UserIntent
+case class AskMarketPriceCommodity(commodity: Commodity) extends UserIntent
+case class AskMaxCommodityCanBuy(commodity: Commodity) extends UserIntent
+case class AskGoldForSellingCommodity(quantity: Quantity, commodity: Commodity) extends UserIntent
+case class AskGoldForSellingMaxCommodity(commodity: Commodity) extends UserIntent
+
+case class SellCommodity(quantity: Quantity, commodity: Commodity) extends UserIntent
+case class BuyCommodity(quantity: Quantity, commodity: Commodity) extends UserIntent
+
 
 object UserIntentTester {
 
+  implicit class ParseTreePimper(parseTree: ParseTree) {
+
+    private val commodityMap: Map[String, Commodity] = Map(
+      "lemon" -> Lemon,
+      "watermelon" -> Watermelon
+    )
+
+    private lazy val entities = parseTree.flatten
+    private lazy val tags = parseTree.tags
+
+    def hasLemma(synonymSet: Set[String]): Boolean =
+      entities.map(_.lemma).exists(synonymSet.contains)
+
+    def quantity: Option[Int] =
+      entities.flatMap(_.namedEntity).collect { case Number(x) => x.toInt}.headOption
+
+    def commodity: Option[Commodity] =
+      entities.map(_.lemma).flatMap(commodityMap.get).headOption
+
+    def hasQuestionForm: Boolean =
+      tags.contains(DeclarativeSentenceWithSubjectAuxInv) || tags.contains(DirectQuestionIntroByWhElement)
+
+  }
+
+  lazy val wordNet = WordNet()
   lazy val coreNlp = new CoreNLP()
   lazy val annotator = new FlatAnnotator(coreNlp)
   lazy val treeParser = new TreeAnnotator(coreNlp)
@@ -15,41 +53,55 @@ object UserIntentTester {
   def testUserIntent(text: String): Option[UserIntent] =
     treeParser.build(text).headOption.flatMap { parseTree =>
 
-        val flattenedTree = parseTree.flatten
+      println(parseTree.flatten.map(_.raw).mkString(" "))
+      println(parseTree.flatten.map(_.lemma).mkString(" "))
+      println(parseTree.flatten.map(_.lemma).map(x => x -> wordNet.synsets(x)).valueTreeString)
+      println(parseTree.tags)
 
-        val buySynonyms = Set("buy", "purchase")
-        val commodityMap: Map[String, Commodity] = Map(
-          "lemon" -> Lemon,
-          "watermelon" -> Watermelon
-        )
+      val can = Set("can", "could")
+      val price = Set("price", "worth", "cost", "value", "market")
+      val inventory = Set("storage", "inventory", "stock", "stuff", "commodity")
+      val buying = Set("buy", "purchase")
+      val selling = Set("sell")
+      val money = Set("currency", "money", "wallet", "gold", "rich", "wealth", "wealthy")
+      val having = Set("have")
 
-        val commodityOpt = flattenedTree.map(_.lemma).flatMap(commodityMap.get).headOption
-        val hasBuySynonym = flattenedTree.map(_.lemma).exists(buySynonyms.contains)
-        val quantityOpt = flattenedTree.flatMap(_.namedEntity).collect { case Number(x) => x.toInt}.headOption
+      def mentions(synonymSet: Set[String]) = parseTree.hasLemma(synonymSet)
+      def omits(synonymSet: Set[String]) = !parseTree.hasLemma(synonymSet)
 
-        (commodityOpt, hasBuySynonym, quantityOpt) match {
-          case (Some(commodity), true, Some(quantity)) =>
-            Some(BuyCommodity(Quantity(quantity), commodity))
-          case (Some(commodity), true, None) =>
-            Some(BuyCommodity(Quantity(1), commodity))
-          case _ =>
+      parseTree.commodity match {
+        case Some(commodity) =>
+
+          if (mentions(buying) && omits(selling))
+            if(parseTree.hasQuestionForm)
+              Some(AskIfAbleToBuyCommodity(Quantity(parseTree.quantity.getOrElse(1)), commodity))
+            else
+              Some(BuyCommodity(Quantity(parseTree.quantity.getOrElse(1)), commodity))
+
+          else if (mentions(selling) && omits(buying))
+            Some(SellCommodity(Quantity(parseTree.quantity.getOrElse(1)), commodity))
+
+          else if (mentions(price))
+            Some(AskMarketPriceCommodity(commodity))
+
+          else
+            Some(AskCommodityInventory(commodity))
+
+        case None =>
+
+          if (mentions(money))
+            Some(AskWallet)
+
+          else if (parseTree.hasQuestionForm && mentions(having))
+            Some(AskWholeInventory)
+
+          else if (mentions(inventory))
+            Some(AskWholeInventory)
+
+          else
             None
-//          case Branch(Root,List(
-//            Branch(DeclarativeSentenceWithSubjectAuxInv,List(
-//              Leaf(Modal,Entity(can,can,None)),
-//              Branch(NounPhrase,List(
-//                Leaf(PersonalPronoun,Entity(I,I,None))
-//              )),
-//              Branch(VerbPhrase,List(
-//                Leaf(BaseFormVerb,Entity(buy,buy,None)),
-//                Branch(NounPhrase,List(
-//                  Leaf(CardinalNumber,Entity(two,two,Some(Number(2.0)))),
-//                  Leaf(PluralNoun,Entity(lemons,lemon,None))
-//                ))
-//              ))
-//            ))
-//          ))
-        }
+
       }
+    }
 
 }
