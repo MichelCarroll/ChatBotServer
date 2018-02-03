@@ -1,11 +1,11 @@
+package facebook
 
-import Root.system
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.stream.Materializer
-import facebook.AppContext
+import chat.ReplyBuilder
 import facebook.protocol.{FacebookJsonSupport, MessageResponse, MessagesReceived, TextMessage}
 import spray.json._
 
@@ -37,7 +37,9 @@ class ChatRoute(replyBuilder: ReplyBuilder)
         entity(as[MessagesReceived]) { messagesReceived =>
 
           val responses = messagesReceived.entries
-            .map(entry => MessageResponse(entry.sender, TextMessage(replyBuilder.reply(entry.message.value))))
+            .map(entry => MessageResponse(entry.sender, TextMessage(
+              replyBuilder.reply(entry.sender.value, entry.message.value)
+            )))
             .map(response =>
               Http().singleRequest(HttpRequest(
                 method = HttpMethods.POST,

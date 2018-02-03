@@ -9,7 +9,7 @@ case class Quantity(amount: Int) {
 
 case class Gold(amount: Int) {
   def +(other: Gold) = Gold(amount + other.amount)
-  def -(other: Gold) = Gold(amount + other.amount)
+  def -(other: Gold) = Gold(amount - other.amount)
   def >=(other: Gold): Boolean = amount >= other.amount
   def <=(other: Gold): Boolean = amount <= other.amount
   def *(quantity: Quantity) = Gold(amount * quantity.amount)

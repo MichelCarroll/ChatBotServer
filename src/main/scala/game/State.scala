@@ -16,11 +16,12 @@ case class PlayerState(gold: Gold, inventory: Map[Commodity, Quantity]) {
 
   def buy(commodity: Commodity, quantity: Quantity, marketState: MarketState): Either[InvalidCommand, PlayerState] = {
     val cost = marketState.prices(commodity) * quantity
+    println(cost)
     if(gold >= cost)
       Right(
         copy(
-        gold = gold - cost,
-        inventory = inventory.updated(commodity, inventory(commodity) + quantity)
+          gold = gold - cost,
+          inventory = inventory.updated(commodity, inventory(commodity) + quantity)
         )
       )
     else
@@ -43,7 +44,7 @@ case class PlayerState(gold: Gold, inventory: Map[Commodity, Quantity]) {
 
 object PlayerState {
   def initial = PlayerState(
-    Gold(0),
+    Gold(100),
     Commodity.all.map((c: Commodity) => c -> Quantity(0)).toMap
   )
 }
@@ -57,7 +58,7 @@ case class GameState(
 
   implicit class PlayerStatePimp(playerState: PlayerState) {
     def vulgarizedCommodity(commodity: Commodity): String = playerState.inventory(commodity) match {
-      case Quantity(0) => s"no ${commodity.singular}"
+      case Quantity(0) => s"no ${commodity.plural}"
       case Quantity(1) => s"1 ${commodity.singular}"
       case Quantity(q) => s"$q ${commodity.plural}"
     }
@@ -82,21 +83,21 @@ case class GameState(
   def execute(playerId: PlayerId, userIntent: UserIntent): (GameState, Notification) =
     userIntent match {
       case AskWallet =>
-        (this, Notification(s"You have ${playerStates(playerId).gold.amount} gold.")))
+        (this, Notification(s"You have ${playerStates(playerId).gold.amount} gold."))
 
       case AskWholeInventory =>
-        val inventoryReport = playerStates(playerId).vulgarizedInventory.mkString(", ")
-        (this, Notification(s"You have $inventoryReport.")))
+        val inventoryReport = playerStates(playerId).vulgarizedInventory.map(_._2).mkString(", ")
+        (this, Notification(s"You have $inventoryReport."))
 
       case AskCommodityInventory(commodity) =>
         val commodityReport = playerStates(playerId).vulgarizedCommodity(commodity)
-        (this, Notification(s"You have $commodityReport.")))
+        (this, Notification(s"You have $commodityReport."))
 
       case AskIfAbleToBuyCommodity(quantity, commodity) =>
         (this, Notification("Not implemented yet"))
 
       case AskMarketPriceCommodity(commodity) =>
-        (this, Notification(s"The ${commodity.plural} are worth ${marketState.prices(commodity).amount} gold.")))
+        (this, Notification(s"The ${commodity.plural} are worth ${marketState.prices(commodity).amount} gold."))
 
       case AskMaxCommodityCanBuy(commodity) =>
         (this, Notification("Not implemented yet"))

@@ -41,6 +41,13 @@ object UserIntentExtractor {
   lazy val annotator = new FlatAnnotator(coreNlp)
   lazy val treeParser = new TreeAnnotator(coreNlp)
 
+  def warmup(): Unit = {
+    wordNet
+    coreNlp
+    annotator
+    treeParser
+  }
+
   def userIntent(text: String): Option[UserIntent] =
     treeParser.build(text).headOption.flatMap { parseTree =>
 

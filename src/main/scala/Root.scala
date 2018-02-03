@@ -1,20 +1,32 @@
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
-import facebook.AppContext
-import game.UserIntentExtractor
-import nlp.{FlatAnnotator, CoreNLP, NER, TreeAnnotator}
+import chat.ReplyBuilder
+import facebook.{AppContext, ChatRoute}
+import game.{GameState, PlayerId, UserIntentExtractor}
 
 import scala.io.StdIn
-import sext._
-import wordnet.WordNet
 
 class GameReplyBuilder extends ReplyBuilder {
-  def reply(received: String): String = {
-    UserIntentExtractor.userIntent(received) match {
-      case Some(userIntent) => s"You want to $userIntent"
-      case None => "Uh?"
+
+  var gameState = GameState.initial
+
+  def reply(recipientId: String, received: String): String = {
+    val playerId = PlayerId(recipientId)
+    if(gameState.playerStates.get(playerId).isEmpty) {
+      gameState = gameState.join(playerId)
+      "Welcome to the CommodityBot"
     }
+    else
+      UserIntentExtractor.userIntent(received) match {
+        case Some(userIntent) =>
+          gameState.execute(playerId, userIntent) match {
+            case (newGameState, notification) =>
+              gameState = newGameState
+              notification.text
+          }
+        case None => "Uh?"
+      }
   }
 }
 
@@ -33,9 +45,12 @@ object Root extends App {
   val bindingFuture = Http().bindAndHandle(new ChatRoute(replyBuilder).route, "localhost", 8888)
 
   println(s"Server online at http://localhost:8888/\nPress RETURN to stop...")
+  UserIntentExtractor.warmup()
+
   StdIn.readLine()
   bindingFuture
     .flatMap(_.unbind())
     .onComplete(_ => system.terminate())
+
 
 }
