@@ -40,6 +40,8 @@ class GameReplyBuilder extends ReplyBuilder {
 
 object Root extends App {
 
+  val portNumber = args(0).toInt
+
   implicit val system = ActorSystem("my-system")
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
@@ -50,9 +52,9 @@ object Root extends App {
   )
 
   val replyBuilder = new GameReplyBuilder()
-  val bindingFuture = Http().bindAndHandle(new ChatRoute(replyBuilder).route, "localhost", 8888)
+  val bindingFuture = Http().bindAndHandle(new ChatRoute(replyBuilder).route, "0.0.0.0", portNumber)
 
-  println(s"Server online at http://localhost:8888/\nPress RETURN to stop...")
+  println(s"Server online at http://0.0.0.0:${portNumber}/\nPress RETURN to stop...")
   UserIntentExtractor.warmup()
 
   StdIn.readLine()

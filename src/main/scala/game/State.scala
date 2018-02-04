@@ -11,8 +11,10 @@ object MarketState {
   )
 }
 
+case class Inventory(commodities: Map[Commodity, Quantity])
+
 case class PlayerId(id: String) extends AnyVal
-case class PlayerState(gold: Gold, inventory: Map[Commodity, Quantity]) {
+case class PlayerState(gold: Gold, inventory: Inventory) {
 
   def buy(commodity: Commodity, quantity: Quantity, marketState: MarketState): Either[InvalidCommand, PlayerState] = {
     val cost = marketState.prices(commodity) * quantity
@@ -20,7 +22,9 @@ case class PlayerState(gold: Gold, inventory: Map[Commodity, Quantity]) {
       Right(
         copy(
           gold = gold - cost,
-          inventory = inventory.updated(commodity, inventory(commodity) + quantity)
+          inventory = inventory.copy(commodities =
+            inventory.commodities.updated(commodity, inventory.commodities(commodity) + quantity)
+          )
         )
       )
     else
@@ -28,11 +32,13 @@ case class PlayerState(gold: Gold, inventory: Map[Commodity, Quantity]) {
   }
 
   def sell(commodity: Commodity, quantity: Quantity, marketState: MarketState): Either[InvalidCommand, PlayerState] = {
-    if(inventory(commodity) >= quantity)
+    if(inventory.commodities(commodity) >= quantity)
       Right(
         copy(
           gold = gold + marketState.prices(commodity) * quantity,
-          inventory = inventory.updated(commodity, inventory(commodity) - quantity)
+          inventory = inventory.copy(commodities =
+            inventory.commodities.updated(commodity, inventory.commodities(commodity) - quantity)
+          )
         )
       )
     else
@@ -42,19 +48,11 @@ case class PlayerState(gold: Gold, inventory: Map[Commodity, Quantity]) {
 }
 
 object PlayerState {
-  def initial = PlayerState(
-    Gold(100),
-    Commodity.all.map((c: Commodity) => c -> Quantity(0)).toMap
-  )
+  def initialInventory: Inventory = Inventory(Commodity.all.map((c: Commodity) => c -> Quantity(0)).toMap)
+  def initial = PlayerState(Gold(100), initialInventory)
 }
 
-case class Notification(text: String)
-
-case class GameState(
-                    playerStates: Map[PlayerId, PlayerState],
-                    marketState: MarketState
-                    ) {
-
+trait Vulgarizations {
   implicit class CommodityPimps(commodity: Commodity) {
     def vulgarizedWithQuantity(quantity: Quantity): String = quantity match {
       case Quantity(0) => s"no ${commodity.plural}"
@@ -63,21 +61,83 @@ case class GameState(
     }
   }
 
-  implicit class PlayerStatePimp(playerState: PlayerState) {
-    def vulgarizedInventory: List[(Commodity, String)] = playerState.inventory
+  implicit class InventoryPimp(inventory: Inventory) {
+    def vulgarizedInventory: List[(Commodity, String)] = inventory.commodities
       .toList
       .sortBy(_._2.amount)
       .reverse
       .map { case (c, _) => (
         c,
-        c.vulgarizedWithQuantity(playerState.inventory(c))
+        c.vulgarizedWithQuantity(inventory.commodities(c))
       ) }
   }
+}
+
+sealed trait Notification {
+  def text: String
+}
+
+case class AnnounceGoldOwned(gold: Gold) extends Notification {
+  def text = s"You have ${gold.amount} gold."
+}
+
+case class AnnounceWholeInventory(inventory: Inventory) extends Notification with Vulgarizations {
+  def text = s"You have ${inventory.vulgarizedInventory.map(_._2).mkString(", ")}."
+}
+
+case class AnnounceCommodityInventory(commodity: Commodity, quantity: Quantity) extends Notification with Vulgarizations {
+  def text = s"You have ${commodity.vulgarizedWithQuantity(quantity)}."
+}
+
+case class AnnounceCanAfford(commodity: Commodity, quantity: Quantity) extends Notification with Vulgarizations {
+  def text = s"Yes, you can afford ${commodity.vulgarizedWithQuantity(quantity)}."
+}
+
+case class AnnounceCannotAfford(commodity: Commodity, quantity: Quantity) extends Notification with Vulgarizations {
+  def text = s"No, you can't afford ${commodity.vulgarizedWithQuantity(quantity)}."
+}
+
+case class AnnounceCommodityMarketPrice(commodity: Commodity, gold: Gold) extends Notification {
+  def text = s"The ${commodity.plural} are worth ${gold.amount} gold."
+}
+
+case class AnnounceMaxCommodityCanAfford(commodity: Commodity, quantity: Quantity) extends Notification with Vulgarizations {
+  def text = s"You can afford ${commodity.vulgarizedWithQuantity(quantity)}."
+}
+
+case class AnnounceGoldFromSellingCommodity(gold: Gold, commodity: Commodity, quantity: Quantity) extends Notification with Vulgarizations {
+  def text = s"You would make ${gold.amount} gold for selling ${commodity.vulgarizedWithQuantity(quantity)}."
+}
+
+case class AnnounceGoldFromSellingMaxCommodity(gold: Gold, commodity: Commodity, quantity: Quantity) extends Notification with Vulgarizations {
+  def text = s"You would make ${gold.amount} gold for selling ${commodity.vulgarizedWithQuantity(quantity)}."
+}
+
+case class AnnounceSuccessfulBuy(commodity: Commodity, quantity: Quantity) extends Notification with Vulgarizations {
+  def text = s"OK! You now have ${commodity.vulgarizedWithQuantity(quantity)}."
+}
+
+case class AnnounceSuccessfulSell(commodity: Commodity, quantity: Quantity) extends Notification with Vulgarizations {
+  def text = s"OK! You now have ${commodity.vulgarizedWithQuantity(quantity)}."
+}
+
+case object AnnounceNotEnoughGold extends Notification {
+  def text = "You don't have enough gold!"
+}
+
+case object AnnounceNotEnoughInventory extends Notification {
+  def text = "You don't have enough in your inventory!"
+}
+
+case class GameState(
+                    playerStates: Map[PlayerId, PlayerState],
+                    marketState: MarketState
+                    ) {
 
   implicit class InvalidCommandPimp(invalidCommand: InvalidCommand) {
-    def vulgarized: String = invalidCommand match {
-      case InsufficientInventory => "You don't have enough in your inventory!"
-      case InsufficientMoney => "You don't have enough gold!"
+    def notification: Notification = invalidCommand match {
+      case InsufficientInventory => AnnounceNotEnoughInventory
+      case InsufficientMoney => AnnounceNotEnoughGold
     }
   }
 
@@ -87,56 +147,52 @@ case class GameState(
   def execute(playerId: PlayerId, userIntent: UserIntent): (GameState, Notification) =
     userIntent match {
       case AskWallet =>
-        (this, Notification(s"You have ${playerStates(playerId).gold.amount} gold."))
+        (this, AnnounceGoldOwned(playerStates(playerId).gold))
 
       case AskWholeInventory =>
-        val inventoryReport = playerStates(playerId).vulgarizedInventory.map(_._2).mkString(", ")
-        (this, Notification(s"You have $inventoryReport."))
+        (this, AnnounceWholeInventory(playerStates(playerId).inventory))
 
       case AskCommodityInventory(commodity) =>
-        val commodityReport = commodity.vulgarizedWithQuantity(playerStates(playerId).inventory(commodity))
-        (this, Notification(s"You have $commodityReport."))
+        (this, AnnounceCommodityInventory(commodity, playerStates(playerId).inventory.commodities(commodity)))
 
       case AskIfAbleToBuyCommodity(quantity, commodity) =>
         if (playerStates(playerId).gold >= marketState.prices(commodity) * quantity)
-          (this, Notification(s"Yes, you can afford ${commodity.vulgarizedWithQuantity(quantity)}."))
+          (this, AnnounceCanAfford(commodity, quantity))
         else
-          (this, Notification(s"No, you can't afford ${commodity.vulgarizedWithQuantity(quantity)}."))
+          (this, AnnounceCannotAfford(commodity, quantity))
 
       case AskMarketPriceCommodity(commodity) =>
-        (this, Notification(s"The ${commodity.plural} are worth ${marketState.prices(commodity).amount} gold."))
+        (this, AnnounceCommodityMarketPrice(commodity, marketState.prices(commodity)))
 
       case AskMaxCommodityCanBuy(commodity) =>
         val quantity = Quantity(playerStates(playerId).gold.amount / marketState.prices(commodity).amount)
-        (this, Notification(s"You can afford ${commodity.vulgarizedWithQuantity(quantity)}."))
+        (this, AnnounceMaxCommodityCanAfford(commodity, quantity))
 
       case AskGoldForSellingCommodity(quantity, commodity) =>
         val gold = marketState.prices(commodity) * quantity
-        (this, Notification(s"You would make ${gold.amount} gold for selling ${commodity.vulgarizedWithQuantity(quantity)}."))
+        (this, AnnounceGoldFromSellingCommodity(gold, commodity, quantity))
 
       case AskGoldForSellingMaxCommodity(commodity) =>
-        val quantity = playerStates(playerId).inventory(commodity)
+        val quantity = playerStates(playerId).inventory.commodities(commodity)
         val gold = marketState.prices(commodity) * quantity
-        (this, Notification(s"You would make ${gold.amount} gold for selling ${commodity.vulgarizedWithQuantity(quantity)}."))
+        (this, AnnounceGoldFromSellingMaxCommodity(gold, commodity, quantity))
 
       case SellCommodity(quantity, commodity) =>
         playerStates(playerId).sell(commodity, quantity, marketState) match {
           case Right(playerState) =>
             val newState = copy(playerStates = playerStates.updated(playerId, playerState))
-            val commodityReport = commodity.vulgarizedWithQuantity(newState.playerStates(playerId).inventory(commodity))
-            (newState, Notification(s"OK! You now have $commodityReport."))
+            (newState, AnnounceSuccessfulSell(commodity, newState.playerStates(playerId).inventory.commodities(commodity)))
           case Left(error) =>
-            (this, Notification(error.vulgarized))
+            (this, error.notification)
         }
 
       case BuyCommodity(quantity, commodity) =>
         playerStates(playerId).buy(commodity, quantity, marketState) match {
           case Right(playerState) =>
             val newState = copy(playerStates = playerStates.updated(playerId, playerState))
-            val commodityReport = commodity.vulgarizedWithQuantity(newState.playerStates(playerId).inventory(commodity))
-            (newState, Notification(s"OK! You now have $commodityReport."))
+            (newState, AnnounceSuccessfulBuy(commodity, newState.playerStates(playerId).inventory.commodities(commodity)))
           case Left(error) =>
-            (this, Notification(error.vulgarized))
+            (this, error.notification)
         }
     }
 }
