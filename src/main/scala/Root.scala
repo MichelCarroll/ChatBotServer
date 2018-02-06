@@ -42,27 +42,20 @@ class GameReplyBuilder extends ReplyBuilder {
 
 object Root extends App {
 
-  val portNumber = args(0).toInt
+  val portNumber = sys.env("PORT").toInt
+  val verifySecret = sys.env("VERIFY_SECRET")
+  val pageToken = sys.env("PAGE_TOKEN")
 
   implicit val system = ActorSystem("my-system")
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
 
-  implicit val appContext = AppContext(
-    "6dac5c2e-bb5c-4b1b-b2c4-113907d51d3e",
-    "EAAWoxZCnbZCwkBAFyP2WeYDz9mMZBZB1JHPZBn0kIu7SCvGoyTRQoSTNzLdLeVsqhTpjGb2XBf5vg0wZBui6Pq8TyPZAVNIedSnvLE9rM6efLHnxJ110cX5hwif1HRVEwbnoTRz0tVPfX63T3bNecnJSVifgrXQAl48oRNH9OxZAZBAZDZD"
-  )
+  implicit val appContext = AppContext(verifySecret, pageToken)
 
   val replyBuilder = new GameReplyBuilder()
   val bindingFuture = Http().bindAndHandle(new ChatRoute(replyBuilder).route, "0.0.0.0", portNumber)
 
   println(s"Server online at http://0.0.0.0:${portNumber}/")
   UserIntentExtractor.warmup()
-
-//  StdIn.readLine()
-//  bindingFuture
-//    .flatMap(_.unbind())
-//    .onComplete(_ => system.terminate())
-
-
+  
 }
