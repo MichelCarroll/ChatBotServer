@@ -1,3 +1,5 @@
+import java.security.KeyStore
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
@@ -54,13 +56,13 @@ object Root extends App {
   val replyBuilder = new GameReplyBuilder()
   val bindingFuture = Http().bindAndHandle(new ChatRoute(replyBuilder).route, "0.0.0.0", portNumber)
 
-  println(s"Server online at http://0.0.0.0:${portNumber}/\nPress RETURN to stop...")
+  println(s"Server online at http://0.0.0.0:${portNumber}/")
   UserIntentExtractor.warmup()
 
-  StdIn.readLine()
-  bindingFuture
-    .flatMap(_.unbind())
-    .onComplete(_ => system.terminate())
+//  StdIn.readLine()
+//  bindingFuture
+//    .flatMap(_.unbind())
+//    .onComplete(_ => system.terminate())
 
 
 }
